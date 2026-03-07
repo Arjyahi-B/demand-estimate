@@ -1,6 +1,6 @@
-# Prod Templates and Wrappers (Core Pipeline Untouched)
+# Prod Templates and Wrappers
 
-This folder is a production handoff layer around your current scripts:
+This folder is a production handoff layer around the current scripts:
 - preprocessing source: `../run_dynamic_demand_baseline.py`
 - modeling source: `../run_dynamic_demand_models_gross.py`
 
@@ -95,12 +95,3 @@ Preprocessing outputs:
 
 Modeling outputs:
 - `output/07_model_results`
-
-## Handoff recommendation for Dan/prod
-Send this `prod/` folder plus:
-- `run_dynamic_demand_baseline.py`
-- `run_dynamic_demand_models_gross.py`
-- `prod/db_config_template.py`
-- `requirements.txt`
-
-This keeps implementation logic fixed while letting prod control runtime parameters.
