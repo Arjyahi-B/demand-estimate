@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Dynamic Demand Prod Folder (Standalone Runbook)
 
 This `prod/` folder is now **fully runnable by itself**.
