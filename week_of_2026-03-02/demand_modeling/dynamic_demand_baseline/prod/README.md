@@ -157,6 +157,7 @@ python run_dynamic_demand_preprocessing_prod.py `
   --price-created-start 2025-07-01 `
   --realized-cutoff 2026-03-06
 ```
+Change dates in wrapper mode if required to override dates in core files. 
 
 ### 7.2 Single hotel preprocessing
 ```powershell
