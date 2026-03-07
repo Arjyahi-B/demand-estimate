@@ -1,50 +1,168 @@
-# Prod Templates and Wrappers (Core Pipeline Untouched)
+# Dynamic Demand Prod Folder (Standalone Runbook)
 
-This folder is a production handoff layer around your current scripts:
-- preprocessing source: `../run_dynamic_demand_baseline.py`
-- modeling source: `../run_dynamic_demand_models_gross.py`
+This `prod/` folder is now **fully runnable by itself**.
+You can share this folder only.
 
-No changes are required in your current pipeline files.
+## 1) What is included
 
-## Files in this folder
+### Core executables (standalone copies)
+- `run_dynamic_demand_baseline.py`
+- `run_dynamic_demand_models_gross.py`
+
+These are the main scripts that do preprocessing and modeling.
+
+### Wrapper scripts (CLI parameterized)
 - `run_dynamic_demand_preprocessing_prod.py`
 - `run_dynamic_demand_modeling_prod.py`
+
+Use these if you prefer passing config via command line flags.
+
+### Template scripts (config-block style)
 - `template_dynamic_demand_preprocessing_prod.py`
 - `template_dynamic_demand_modeling_prod.py`
 
-## Two ways to run
-1. CLI wrapper mode (best for scheduled jobs / automation).
-2. Template mode (best for prod engineers who prefer editing one config block in Python).
+Use these if you prefer editing constants in Python.
 
-## Reproducibility contract
-- Date window is explicit.
-- Hotels are explicit (or ALL).
-- Seeds/folds are explicit.
-- Target columns are explicit.
-- Source scripts remain unchanged.
+### Config and dependencies
+- `db_config_template.py`
+- `requirements.txt`
 
-## DB config requirement
-Preprocessing needs a Python file that defines:
+## 2) What each script does
 
+### A) `run_dynamic_demand_baseline.py` (core preprocessing)
+Purpose:
+- Connects to Postgres.
+- Pulls hotel/inventory/reservation/rate/compset data.
+- Builds DBA0..DBA7 hotel-day panel.
+- Creates demand targets and engineered features.
+- Applies clipping/log transforms in current pipeline logic.
+- Writes preprocessing outputs.
+
+Hotel scope:
+- Default: all active hotels (`TARGET_HOTELS = []` in file).
+- Runtime override supported:
+  - `--hotels ALL`
+  - `--hotels Anvil_Hotel`
+  - `--hotels "Anvil_Hotel,Ozarker_Lodge"`
+
+Outputs:
+- `output/01_long_ls_panel/`
+- `output/02_model_input/`
+- `output/06_reporting/`
+
+---
+
+### B) `run_dynamic_demand_models_gross.py` (core modeling)
+Purpose:
+- Loads model input from preprocessing.
+- Runs baseline, GLM, and XGBoost modeling.
+- Executes grouped random date CV.
+- Produces metrics, diagnostics, SHAP, coefficients.
+
+Hotel scope:
+- Default: all hotels present in model input.
+- Runtime override supported:
+  - `--hotels ALL`
+  - `--hotels Anvil_Hotel`
+  - `--hotels "Anvil_Hotel,Ozarker_Lodge"`
+
+Outputs:
+- `output/07_model_results/`
+
+---
+
+### C) `run_dynamic_demand_preprocessing_prod.py` (wrapper)
+Purpose:
+- Runs preprocessing core script with CLI-supplied parameters (dates/hotels/db-config/source path).
+- Good for automation/scheduling.
+
+Default source script:
+- `./run_dynamic_demand_baseline.py` (inside this same folder)
+
+---
+
+### D) `run_dynamic_demand_modeling_prod.py` (wrapper)
+Purpose:
+- Runs modeling core script with CLI-supplied parameters (dates/seeds/folds/targets/hotels/source path).
+- Good for automation/scheduling.
+
+Default source script:
+- `./run_dynamic_demand_models_gross.py` (inside this same folder)
+
+---
+
+### E) `template_dynamic_demand_preprocessing_prod.py` (template)
+Purpose:
+- Same as preprocessing wrapper, but config is edited at top of file.
+- Good for manual operations.
+
+Default source script:
+- `./run_dynamic_demand_baseline.py`
+
+Default DB config file:
+- `./db_config.py`
+
+---
+
+### F) `template_dynamic_demand_modeling_prod.py` (template)
+Purpose:
+- Same as modeling wrapper, but config is edited at top of file.
+- Good for manual operations.
+
+Default source script:
+- `./run_dynamic_demand_models_gross.py`
+
+## 3) Prerequisites
+
+- Python installed
+- Network access to Postgres
+- Valid DB credentials
+
+Install dependencies from this folder:
+```powershell
+pip install -r requirements.txt
+```
+
+## 4) DB config setup
+
+1. Copy:
+- `db_config_template.py` -> `db_config.py`
+
+2. Fill credentials:
 ```python
 DB_CONFIG = {
-  "host": "...",
-  "port": 5432,
-  "database": "...",
-  "user": "...",
-  "password": "...",
-  "sslmode": "require"
+    "host": "...",
+    "port": 5432,
+    "database": "...",
+    "user": "...",
+    "password": "...",
+    "sslmode": "require",
 }
 ```
 
-You can use `prod/db_config_template.py`, fill values, and save as `prod/db_config.py`.
-You can also reuse `../db_config_template.py` and save it as `../db_config.py`.
+Security:
+- Never commit real credentials.
 
-## Option 1: CLI wrapper mode
-### Preprocessing
+## 5) Recommended mode
+
+Use **wrapper CLI mode** in production.
+
+Use template mode only if your team prefers editing Python config blocks.
+
+Run either wrappers or templates for a given job, not both.
+
+## 6) End-to-end run sequence
+
+Run order:
+1. Preprocessing
+2. Modeling
+
+## 7) Commands (wrapper mode)
+
+### 7.1 All hotels preprocessing
 ```powershell
-python week_of_2026-03-02/demand_modeling/dynamic_demand_baseline/prod/run_dynamic_demand_preprocessing_prod.py `
-  --db-config C:\path\to\db_config.py `
+python run_dynamic_demand_preprocessing_prod.py `
+  --db-config .\db_config.py `
   --hotels ALL `
   --stay-start 2025-07-01 `
   --stay-end 2026-02-28 `
@@ -53,9 +171,18 @@ python week_of_2026-03-02/demand_modeling/dynamic_demand_baseline/prod/run_dynam
   --realized-cutoff 2026-03-06
 ```
 
-### Modeling
+### 7.2 Single hotel preprocessing
 ```powershell
-python week_of_2026-03-02/demand_modeling/dynamic_demand_baseline/prod/run_dynamic_demand_modeling_prod.py `
+python run_dynamic_demand_preprocessing_prod.py `
+  --db-config .\db_config.py `
+  --hotels Anvil_Hotel `
+  --stay-start 2025-07-01 `
+  --stay-end 2026-02-28
+```
+
+### 7.3 All hotels modeling
+```powershell
+python run_dynamic_demand_modeling_prod.py `
   --hotels ALL `
   --stay-start 2025-07-01 `
   --stay-end 2026-02-28 `
@@ -68,39 +195,54 @@ python week_of_2026-03-02/demand_modeling/dynamic_demand_baseline/prod/run_dynam
   --target-secondary target_gross_bookings
 ```
 
-## Option 2: Template mode
-### Preprocessing template
-Edit config block at top of:
-- `template_dynamic_demand_preprocessing_prod.py`
-
-Then run:
+### 7.4 Single hotel modeling
 ```powershell
-python week_of_2026-03-02/demand_modeling/dynamic_demand_baseline/prod/template_dynamic_demand_preprocessing_prod.py
+python run_dynamic_demand_modeling_prod.py `
+  --hotels Anvil_Hotel `
+  --stay-start 2025-07-01 `
+  --stay-end 2026-02-28 `
+  --realized-cutoff 2026-03-06
 ```
 
-### Modeling template
-Edit config block at top of:
-- `template_dynamic_demand_modeling_prod.py`
+## 8) Commands (template mode)
 
-Then run:
+### 8.1 Preprocessing template
+1. Edit config block in `template_dynamic_demand_preprocessing_prod.py`
+2. Run:
 ```powershell
-python week_of_2026-03-02/demand_modeling/dynamic_demand_baseline/prod/template_dynamic_demand_modeling_prod.py
+python template_dynamic_demand_preprocessing_prod.py
 ```
 
-## What each step writes
-Preprocessing outputs:
-- `output/01_long_ls_panel`
-- `output/02_model_input`
-- `output/06_reporting`
+### 8.2 Modeling template
+1. Edit config block in `template_dynamic_demand_modeling_prod.py`
+2. Run:
+```powershell
+python template_dynamic_demand_modeling_prod.py
+```
 
-Modeling outputs:
-- `output/07_model_results`
+## 9) Outputs
 
-## Handoff recommendation for Dan/prod
-Send this `prod/` folder plus:
-- `run_dynamic_demand_baseline.py`
-- `run_dynamic_demand_models_gross.py`
-- `prod/db_config_template.py`
-- `requirements.txt`
+Preprocessing:
+- `output/01_long_ls_panel/`
+- `output/02_model_input/`
+- `output/06_reporting/`
 
-This keeps implementation logic fixed while letting prod control runtime parameters.
+Modeling:
+- `output/07_model_results/`
+
+## 10) Common failures and fixes
+
+1. `DB config not found`:
+- Ensure `db_config.py` exists in this folder.
+- Or pass `--db-config` path in wrapper mode.
+
+2. `No rows after filtering`:
+- Validate hotel IDs exactly match `hotels.global_id`.
+- Confirm date range has data.
+
+3. Modeling cannot find model-input file:
+- Run preprocessing first.
+- Confirm `output/02_model_input/all_hotels_model_input_dynamic_baseline.csv` exists.
+
+4. Single-hotel modeling gives no folds:
+- Hotel may not meet minimum fold train/test row thresholds.

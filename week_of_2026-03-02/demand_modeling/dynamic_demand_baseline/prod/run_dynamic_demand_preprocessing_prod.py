@@ -49,7 +49,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--source-script",
         type=Path,
-        default=Path(__file__).resolve().parents[1] / "run_dynamic_demand_baseline.py",
+        default=Path(__file__).resolve().parent / "run_dynamic_demand_baseline.py",
         help="Path to baseline preprocessing script.",
     )
     parser.add_argument(

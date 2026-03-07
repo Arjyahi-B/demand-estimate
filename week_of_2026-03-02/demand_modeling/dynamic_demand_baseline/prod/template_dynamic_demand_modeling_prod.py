@@ -12,7 +12,7 @@ import pandas as pd
 # =========================
 # EDIT THIS CONFIG BLOCK
 # =========================
-SOURCE_SCRIPT = Path(__file__).resolve().parents[1] / "run_dynamic_demand_models_gross.py"
+SOURCE_SCRIPT = Path(__file__).resolve().parent / "run_dynamic_demand_models_gross.py"
 
 # Use [] to model all hotels found in model input. Otherwise list hotel IDs.
 HOTEL_IDS: List[str] = []

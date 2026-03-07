@@ -12,8 +12,8 @@ import pandas as pd
 # =========================
 # EDIT THIS CONFIG BLOCK
 # =========================
-SOURCE_SCRIPT = Path(__file__).resolve().parents[1] / "run_dynamic_demand_baseline.py"
-DB_CONFIG_FILE = Path(__file__).resolve().parents[1] / "db_config.py"
+SOURCE_SCRIPT = Path(__file__).resolve().parent / "run_dynamic_demand_baseline.py"
+DB_CONFIG_FILE = Path(__file__).resolve().parent / "db_config.py"
 
 # Use [] for all active hotels in DB, or list explicit hotel IDs.
 HOTEL_IDS: List[str] = []
